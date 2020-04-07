@@ -1,0 +1,8 @@
+README.md
+pyjq
+setup.py
+pyjq.egg-info/PKG-INFO
+pyjq.egg-info/SOURCES.txt
+pyjq.egg-info/dependency_links.txt
+pyjq.egg-info/requires.txt
+pyjq.egg-info/top_level.txt

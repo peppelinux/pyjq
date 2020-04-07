@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/home/wert/DEV/pyjsonq.env/bin/python3
 import datetime
 import json
 import operator
@@ -32,22 +32,40 @@ def _get_fblocks(fstr):
 class PyJQ(object):
     def __init__(self, json_obj, datetime_field=None,
                  datetime_format=None):
-        self.json = json_obj
-        dline = json.loads(json_obj)
-        self.dline = dline
+        
+        if isinstance(json_obj, str):
+            self.dline = [json.loads(json_obj)]
+        elif isinstance(json_obj, dict):
+            self.dline = [json_obj]
+        elif isinstance(json_obj, list):
+            self.dline = json_obj
 
         if datetime_field:
             # todo - this code is replicated from .filter -> do a specialized method
-            keys = datetime_field.split('__')
-            dt_value = ''
+            dt_value = self._get_value(datetime_field)
+            self.datetime = datetime.datetime.strptime(dt_value,
+                                                       datetime_format)
+
+    def _get_value(self, key):
+        """
+        keys should be a single values or nested like 'key1__key2__key3'
+        """
+        keys = key.split('__')
+        dt_value = ''
+        if key == 'admin.logentry':
+            import pdb; pdb.set_trace()
+        for dline in self.dline:
             try:
                 dt_value = reduce(operator.getitem, keys, dline)
             except TypeError as e:
                 keys_repr = ''.join(['[{}]'.format(k) for k in keys])
                 raise Exception('self.dline[{}] does not exists'.format(keys_repr))
-            
-            self.datetime = datetime.datetime.strptime(dt_value,
-                                                       datetime_format)
+            except KeyError as exc:
+                # print(self)
+                # raise Exception('self.dline[{}] does not exists'.format(keys_repr))
+                # not all the json entries have the same structure ...
+                return
+            return dt_value
         
     def filter(self, key, op='==', value=None):
         """
@@ -66,37 +84,17 @@ class PyJQ(object):
 
         ops = {'==': operator.eq,
                '!=': operator.ne,
-               'in': operator.contains, 
+               'in': operator.contains,
+               
                 # add all the others here
                }
         if op not in ops:
             raise Exception('Invalid operator "{}"'.format(op))
             
-        keys = key.split('__')
-        value_got = ''
-        try:
-            value_got = reduce(operator.getitem, keys, self.dline)
-        except TypeError as exc:
-            keys_repr = ''.join(['[{}]'.format(k) for k in keys])
-            raise Exception('self.dline[{}] does not exists'.format(keys_repr))
-        except KeyError as exc:
-            # print(self)
-            # raise Exception('self.dline[{}] does not exists'.format(keys_repr))
-            # not all the json entries have the same structure ...
-            return
+        value_got = self._get_value(key)
             
-        if isinstance(value, str):
-            if ops[op](value_got, value):
-                return True
-        # TODO - test with mutiple list/dicts nested entries
-        #elif isinstance(value, list):
-            #for elem in value:
-                #if ops[op](value_got, value):
-                    #return True
-        #elif isinstance(value, dict):
-            #for elem in value:
-                #if ops[op](value_got, value):
-                    #return True
+        if ops[op](value_got, value):
+            return True
         elif value == None:
             return value_got
 
@@ -109,7 +107,39 @@ class PyJQ(object):
 
     
     def __str__(self):
-        return json.dumps(json.loads(self.json), indent=2)
+        return json.dumps(self.dline, indent=2)
+
+
+def jqpy(args, line):
+    jq = PyJQ(line, datetime_field=args.datetime_field,
+                    datetime_format=args.datetime_format)
+    status = True
+    limit_cnt = 0
+    if args.start_datetime:
+        if jq.datetime < args.start_datetime.replace(tzinfo=pytz.UTC) or \
+           jq.datetime > args.end_datetime.replace(tzinfo=pytz.UTC):
+            return
+    if filters:
+        filters_blocks = _get_fblocks(filters)
+        for fi in filters_blocks:
+            if len(fi) == 1 and jq.filter(*fi[0].split(' ')):
+                status = True              
+                break
+            elif len(fi) > 1:
+                and_status = True
+                for and_filter in fi:
+                    if not jq.filter(*and_filter.split(' ')):
+                        and_status = False
+                        break
+                status = and_status
+            else:
+                status = False
+    if status:
+        print(jq)        
+        if args.limit:
+            limit_cnt += 1
+            if limit_cnt == args.limit:
+                return
 
 
 if __name__ == '__main__':
@@ -137,38 +167,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     alert_file = open(args.json)
-    limit_cnt = 0
     # got something like ['agent__ip', '==', '172.16.16.254']
     filters = args.filters
-    for line in alert_file.readlines():
-        jq = PyJQ(line, datetime_field=args.datetime_field,
-                        datetime_format=args.datetime_format)
-        status = True
 
-        if args.start_datetime:
-            if jq.datetime < args.start_datetime.replace(tzinfo=pytz.UTC) or \
-               jq.datetime > args.end_datetime.replace(tzinfo=pytz.UTC):
-                continue
-        
-        if filters:
-            filters_blocks = _get_fblocks(filters)
-            for fi in filters_blocks:
-                if len(fi) == 1 and jq.filter(*fi[0].split(' ')):
-                    status = True              
-                    break
-                elif len(fi) > 1:
-                    and_status = True
-                    for and_filter in fi:
-                        if not jq.filter(*and_filter.split(' ')):
-                            and_status = False
-                            break
-                    status = and_status
-                else:
-                    status = False
-        if status:
-            print(jq)        
-            if args.limit:
-                limit_cnt += 1
-                if limit_cnt == args.limit:
-                    break
+    # handle a pure json file or multiple json objects delimited by newline (/n)
+    try:
+        dlines = json.loads(alert_file.read())
+        for dline in dlines:
+            jqpy(args, dline)
+    except json.decoder.JSONDecodeError as excp:
+        #raise('This is not a pure json file "{}" but multiple json delimited by /n'.format(excp))
+        alert_file.seek(0)
+        for line in alert_file.readlines():
+            jqpy(args, line)
     

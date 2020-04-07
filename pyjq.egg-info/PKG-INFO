@@ -1,0 +1,58 @@
+Metadata-Version: 1.1
+Name: pyjq
+Version: 0.4
+Summary: Tool used for converting jiffies from iptables xt_recent into timestamps.
+Home-page: https://github.com/peppelinux/pyjq
+Author: Giuseppe De Marco
+Author-email: demarcog83@gmail.com
+License: BSD
+Description: # pyjq
+        A simple Python package to Query Json Data
+        
+        ## Installation
+        ````
+        pip install pytz
+        ````
+        ## Example data
+        
+        See `example/alerts.json`.
+        pyjq works on lines by lines (splitted by \n).
+        It have been used for Wazuh alert json files and Django dumps.
+        
+        ````
+        python3 pyjq.py -j examples/django_dump.json -limit 2 -filter 'fields__original_url == https://google.com'
+        python3 pyjq.py -j examples/django_dump.json -limit 2 -filter 'model == urlshortener.urlshortener'
+        ````
+        
+        ## Usage
+        
+        Apply some custom filters with AND and OR operators on Wazuh Alert file
+        ````
+        python3 pyjq.py -j ../Scaricati/alerts.json -filter 'agent__ip == 172.16.16.102 and agent__name == telegram-gw or agent__ip == 172.16.16.108'
+        ````
+        
+        Contains operator
+        ````
+        python3 pyjq.py -j ../Scaricati/alerts.json -filter 'rule__description in iptables and agent__name == dev-bastion'
+        ````
+        
+        Convert a specified filed to a pure datetime object and filter in a specified range
+        ````
+        python3 pyjq.py -j ../Scaricati/alerts.json -start_datetime 2020-04-06T10:22:00 -end_datetime 2020-04-06T13:22:00 -datetime_field timestamp
+        ````
+        
+        Limit results to 2 
+        ````
+        python3 pyjq.py -j ../Scaricati/alerts.json  -limit 2
+        ````
+        
+        # Author 
+        Giuseppe De Marco <giuseppe.demarco@unical.it>
+        
+        # Credits
+        Wazuh SIEM group @GarrLab
+        
+Platform: UNKNOWN
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Programming Language :: Python :: 3
