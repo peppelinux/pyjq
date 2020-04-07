@@ -13,6 +13,8 @@ from functools import reduce  # forward compatibility for Python 3
 # datetime.datetime.strptime("2020-04-06T00:42:23.121+0200", strptime_format)
 _DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z" 
 _DATETIME_FORMAT_INPUT = _DATETIME_FORMAT[:-5]
+_BUFSIZE = 4096
+_REALTIME_DELIM = '\n'
 
 def _get_fblocks(fstr):
     """
@@ -180,27 +182,29 @@ def handle_stream(args):
             alert_file.seek(0)
 
         line_buffer = ''
-        for line in alert_file.readlines():
-            if args.echo:
-                print(line)
-                continue
-            if args.realtime:
-                next_loop = True
-                while next_loop:
-                    line_buffer += line.decode() if isinstance(line, bytes) else line
-                    # remove prepending missing json chunks
-                    chunks = line_buffer.split('\n')
-                    for chunked_line in chunks:
-                        try:
-                            jqpy(args, chunked_line, filters)
-                            next_loop = False
-                            line_buffer = chunks[-1]
-                        except json.decoder.JSONDecodeError:
-                            next_loop = True
-                    
-            else:
-                line = line.decode() if isinstance(line, bytes) else line
-                jqpy(args, line, filters)
+        if args.realtime:
+            alert_file.read()
+            while 1:
+                time.sleep(1)
+                digits = alert_file.read(_BUFSIZE)
+                dec_digits = digits.decode() if isinstance(digits, bytes) else digits
+                line_buffer += dec_digits
+                chunks = line_buffer.split(_REALTIME_DELIM)
+                for chunk in chunks:
+                    try:
+                        jqpy(args, chunk, filters)
+                    except json.decoder.JSONDecodeError:
+                        pass
+                    line_buffer = _REALTIME_DELIM.join(chunks[1:])
+                
+        else:
+            for line in alert_file.readlines():
+                if args.echo:
+                    print(line)
+                    continue
+                else:
+                    line = line.decode() if isinstance(line, bytes) else line
+                    jqpy(args, line, filters)
 
 
 if __name__ == '__main__':
@@ -234,8 +238,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     
-    if args.realtime:
-        while 1:
-            handle_stream(args)
-    else:
-        handle_stream(args)
+    handle_stream(args)
