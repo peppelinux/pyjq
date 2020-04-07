@@ -86,7 +86,10 @@ class PyJQ(object):
         ops = {'==': operator.eq,
                '!=': operator.ne,
                'in': operator.contains,
-               
+                '<=': operator.le,
+                '<': operator.lt,
+                '>': operator.gt,
+                '>=': operator.ge,
                 # add all the others here
                }
         if op not in ops:
@@ -236,6 +239,4 @@ if __name__ == '__main__':
                         required=False,
                         help="print processed lines in raw format and exit")
     args = parser.parse_args()
-
-    
     handle_stream(args)
