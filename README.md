@@ -52,6 +52,11 @@ Convert a specified filed to a pure datetime object and filter in a specified ra
 pyjq -j ../Scaricati/alerts.json -start_datetime 2020-04-06T10:22:00 -end_datetime 2020-04-06T13:22:00 -datetime_field timestamp
 ````
 
+Realtime reading
+````
+pyjq -j /var/ossec/logs/alerts/alerts.json -r -start_date 2020-04-07T14:40:23 -datetime_field timestamp -realtime
+````
+
 Use a gzipped json file directly
 ````
 pyjq -j ../Scaricati/alerts.json.gzip

@@ -171,9 +171,18 @@ def handle_stream(args):
     except json.decoder.JSONDecodeError as excp:
         #raise('This is not a pure json file "{}" but multiple json delimited by /n'.format(excp))
         alert_file.seek(0)
+        line_buffer = ''
         for line in alert_file.readlines():
-            line = line.decode() if isinstance(line, bytes) else line
-            jqpy(args, line, filters)
+            if args.realtime:
+                while 1:
+                    line_buffer += line.decode() if isinstance(line, bytes) else line
+                    try:
+                        jqpy(args, line_buffer, filters)
+                    except json.decoder.JSONDecodeError:
+                        break
+            else:
+                line = line.decode() if isinstance(line, bytes) else line
+                jqpy(args, line, filters)
 
 
 if __name__ == '__main__':
