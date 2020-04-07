@@ -85,9 +85,18 @@ class PyJQ(object):
             # not all the json entries have the same structure ...
             return
             
-        if value:
+        if isinstance(value, str):
             if ops[op](value_got, value):
                 return True
+        # TODO - test with mutiple list/dicts nested entries
+        #elif isinstance(value, list):
+            #for elem in value:
+                #if ops[op](value_got, value):
+                    #return True
+        #elif isinstance(value, dict):
+            #for elem in value:
+                #if ops[op](value_got, value):
+                    #return True
         elif value == None:
             return value_got
 
