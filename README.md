@@ -2,6 +2,19 @@
 
 A simple Python package to Query Json Data.
 
+## Features
+
+- Supports pure json files
+- Supports multiple json objects in a file, delimited by newlines (/n)
+- Supports gzipped files
+- Supports customizabile filters
+- Supports pure datetime range filters 
+
+## Todo
+
+The filters could be extended easily, adopting [Python3 stdlib operator](https://docs.python.org/3/library/operator.html).
+See `pyjq.PyJQ.filter` to extend ops mapping.
+
 ## Installation
 
 ````
@@ -33,6 +46,11 @@ pyjq -j ../Scaricati/alerts.json -filter 'rule__description in iptables and agen
 Convert a specified filed to a pure datetime object and filter in a specified range
 ````
 pyjq -j ../Scaricati/alerts.json -start_datetime 2020-04-06T10:22:00 -end_datetime 2020-04-06T13:22:00 -datetime_field timestamp
+````
+
+Use a gzipped json file directly
+````
+pyjq -j ../Scaricati/alerts.json.gzip
 ````
 
 Limit results to 2 

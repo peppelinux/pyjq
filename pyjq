@@ -166,18 +166,27 @@ if __name__ == '__main__':
                         help="how many results to return")
     args = parser.parse_args()
 
-    alert_file = open(args.json)
+    try:
+        alert_file = open(args.json)
+        file_content = alert_file.read()
+    except UnicodeDecodeError:
+        # try to handle it a gzip
+        import gzip
+        alert_file = gzip.open(args.json, 'rb')
+        file_content = alert_file.read().decode()
+
     # got something like ['agent__ip', '==', '172.16.16.254']
     filters = args.filters
 
     # handle a pure json file or multiple json objects delimited by newline (/n)
     try:
-        dlines = json.loads(alert_file.read())
+        dlines = json.loads(file_content)
         for dline in dlines:
             jqpy(args, dline)
     except json.decoder.JSONDecodeError as excp:
         #raise('This is not a pure json file "{}" but multiple json delimited by /n'.format(excp))
         alert_file.seek(0)
         for line in alert_file.readlines():
+            line = line.decode() if isinstance(line, bytes) else line
             jqpy(args, line)
     
