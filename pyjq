@@ -110,7 +110,7 @@ class PyJQ(object):
         return json.dumps(self.dline, indent=2)
 
 
-def jqpy(args, line):
+def jqpy(args, line, filters=None):
     jq = PyJQ(line, datetime_field=args.datetime_field,
                     datetime_format=args.datetime_format)
     status = True
@@ -142,11 +142,37 @@ def jqpy(args, line):
                 return
 
 
+def handle_stream(args):
+    try:
+        alert_file = open(args.json)
+        file_content = alert_file.read()
+    except UnicodeDecodeError:
+        # try to handle it a gzip
+        import gzip
+        alert_file = gzip.open(args.json, 'rb')
+        file_content = alert_file.read().decode()
+
+    # got something like ['agent__ip', '==', '172.16.16.254']
+    filters = args.filters
+
+    # handle a pure json file or multiple json objects delimited by newline (/n)
+    try:
+        dlines = json.loads(file_content)
+        for dline in dlines:
+            jqpy(args, dline, filters)
+    except json.decoder.JSONDecodeError as excp:
+        #raise('This is not a pure json file "{}" but multiple json delimited by /n'.format(excp))
+        alert_file.seek(0)
+        for line in alert_file.readlines():
+            line = line.decode() if isinstance(line, bytes) else line
+            jqpy(args, line, filters)
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('-json', required=True,
-                        help="ossec alerts json file")
+                        help="a json file")
     parser.add_argument('-filters', required=False,
                         help="")
     parser.add_argument('-datetime_field', default = None,
@@ -164,29 +190,14 @@ if __name__ == '__main__':
     parser.add_argument('-limit', type=int,
                         required=False,
                         help="how many results to return")
+    parser.add_argument('-realtime', action='store_true',
+                        required=False,
+                        help="continous and realtime reading")
     args = parser.parse_args()
 
-    try:
-        alert_file = open(args.json)
-        file_content = alert_file.read()
-    except UnicodeDecodeError:
-        # try to handle it a gzip
-        import gzip
-        alert_file = gzip.open(args.json, 'rb')
-        file_content = alert_file.read().decode()
-
-    # got something like ['agent__ip', '==', '172.16.16.254']
-    filters = args.filters
-
-    # handle a pure json file or multiple json objects delimited by newline (/n)
-    try:
-        dlines = json.loads(file_content)
-        for dline in dlines:
-            jqpy(args, dline)
-    except json.decoder.JSONDecodeError as excp:
-        #raise('This is not a pure json file "{}" but multiple json delimited by /n'.format(excp))
-        alert_file.seek(0)
-        for line in alert_file.readlines():
-            line = line.decode() if isinstance(line, bytes) else line
-            jqpy(args, line)
     
+    if args.realtime:
+        while 1:
+            handle_stream(args)
+    else:
+        handle_stream(args)

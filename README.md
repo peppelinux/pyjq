@@ -33,6 +33,10 @@ pyjq -j examples/django_dump.json -limit 2 -filter 'model == urlshortener.urlsho
 
 ## Usage
 
+'agent__name' it's an example of the namespace used by pyjq to access to nested childs. It other word it means `json['agent']['name']`.
+It haven't limits on number of nested elements.
+
+
 Apply some custom filters with AND and OR operators on Wazuh Alert file
 ````
 pyjq -j ../Scaricati/alerts.json -filter 'agent__ip == 172.16.16.102 and agent__name == telegram-gw or agent__ip == 172.16.16.108'
