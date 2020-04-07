@@ -31,7 +31,7 @@ def _get_fblocks(fstr):
 
 class PyJQ(object):
     def __init__(self, json_obj, datetime_field=None,
-                 datetime_format=None):
+                 datetime_format=_DATETIME_FORMAT):
         
         if isinstance(json_obj, str):
             self.dline = [json.loads(json_obj)]
@@ -39,7 +39,7 @@ class PyJQ(object):
             self.dline = [json_obj]
         elif isinstance(json_obj, list):
             self.dline = json_obj
-
+        
         if datetime_field:
             # todo - this code is replicated from .filter -> do a specialized method
             dt_value = self._get_value(datetime_field)
@@ -116,9 +116,17 @@ def jqpy(args, line, filters=None):
     status = True
     limit_cnt = 0
     if args.start_datetime:
-        if jq.datetime < args.start_datetime.replace(tzinfo=pytz.UTC) or \
-           jq.datetime > args.end_datetime.replace(tzinfo=pytz.UTC):
+
+        # this is not needed with py37
+        start_datetime = datetime.datetime.stptime(args.start_datetime, args.datetime_format)
+        end_datetime = datetime.datetime.stptime(args.end_datetime, args.datetime_format)
+        
+        if jq.datetime < start_datetime.replace(tzinfo=pytz.UTC) or \
+           jq.datetime > end_datetime.replace(tzinfo=pytz.UTC):
             return
+
+        
+        
     if filters:
         filters_blocks = _get_fblocks(filters)
         for fi in filters_blocks:
