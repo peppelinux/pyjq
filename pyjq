@@ -118,8 +118,8 @@ def jqpy(args, line, filters=None):
     if args.start_datetime:
 
         # this is not needed with py37
-        start_datetime = datetime.datetime.stptime(args.start_datetime, args.datetime_format)
-        end_datetime = datetime.datetime.stptime(args.end_datetime, args.datetime_format)
+        start_datetime = datetime.datetime.strptime(args.start_datetime, args.datetime_format)
+        end_datetime = datetime.datetime.strptime(args.end_datetime, args.datetime_format)
         
         if jq.datetime < start_datetime.replace(tzinfo=pytz.UTC) or \
            jq.datetime > end_datetime.replace(tzinfo=pytz.UTC):
