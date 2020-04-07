@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import datetime
+import gzip
 import json
 import operator
 import re
@@ -15,6 +16,7 @@ _DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z"
 _DATETIME_FORMAT_INPUT = _DATETIME_FORMAT[:-5]
 _BUFSIZE = 4096
 _REALTIME_DELIM = '\n'
+
 
 def _get_fblocks(fstr):
     """
@@ -44,7 +46,6 @@ class PyJQ(object):
             self.dline = json_obj
         
         if datetime_field:
-            # todo - this code is replicated from .filter -> do a specialized method
             dt_value = self._get_value(datetime_field)
             self.datetime = datetime.datetime.strptime(dt_value,
                                                        datetime_format)
@@ -62,7 +63,6 @@ class PyJQ(object):
                 keys_repr = ''.join(['[{}]'.format(k) for k in keys])
                 raise Exception('self.dline[{}] does not exists'.format(keys_repr))
             except KeyError as exc:
-                # print(self)
                 # raise Exception('self.dline[{}] does not exists'.format(keys_repr))
                 # not all the json entries have the same structure ...
                 return
@@ -80,7 +80,7 @@ class PyJQ(object):
         usage:
             wa.filter('agent__ip') -> return the corresponding value
             wa.filter('agent__ip', '172.16.16.2') -> returns True if match
-            wa.filter('data', 'osquery', 'in') -> returns if 'osquery' is in data
+            wa.filter('rule__description', 'in', 'login') -> returns if 'login' word is in the rule description
         """
 
         ops = {'==': operator.eq,
@@ -104,12 +104,10 @@ class PyJQ(object):
 
     def info(self):
         elems = (json.dumps(self.dline.get('data', ''), indent=2),
-                 str(self.dline.get('full_log', ''))
-                 )
+                 str(self.dline.get('full_log', '')))
         result = '\n'.join(elems)
         print(result)
 
-    
     def __str__(self):
         return json.dumps(self.dline, indent=2)
 
@@ -147,7 +145,6 @@ def jqpy(args, line, filters=None):
             else:
                 status = False
     
-    
     if status:
         print(jq)
         if args.limit:
@@ -163,7 +160,6 @@ def handle_stream(args):
         file_content = alert_file.read()
     except UnicodeDecodeError:
         # try to handle it a gzip
-        import gzip
         alert_file = gzip.open(args.json, 'rb')
         file_content = alert_file.read().decode()
 
@@ -178,36 +174,36 @@ def handle_stream(args):
                 print(dline)
                 continue
             jqpy(args, dline, filters)
+        return
     except json.decoder.JSONDecodeError as excp:
         #raise('This is not a pure json file "{}" but multiple json delimited by /n'.format(excp))
-        # if realtime it takes only the latest entries
-        if not args.realtime:
-            alert_file.seek(0)
-
+        pass
+    
+    # if realtime it takes only the latest entries
+    if args.realtime:
         line_buffer = ''
-        if args.realtime:
-            alert_file.read()
-            while 1:
-                time.sleep(1)
-                digits = alert_file.read(_BUFSIZE)
-                dec_digits = digits.decode() if isinstance(digits, bytes) else digits
-                line_buffer += dec_digits
-                chunks = line_buffer.split(_REALTIME_DELIM)
-                for chunk in chunks:
-                    try:
-                        jqpy(args, chunk, filters)
-                    except json.decoder.JSONDecodeError:
-                        pass
-                    line_buffer = _REALTIME_DELIM.join(chunks[1:])
-                
-        else:
-            for line in alert_file.readlines():
-                if args.echo:
-                    print(line)
-                    continue
-                else:
-                    line = line.decode() if isinstance(line, bytes) else line
-                    jqpy(args, line, filters)
+        alert_file.read()
+        while 1:
+            time.sleep(1)
+            digits = alert_file.read(_BUFSIZE)
+            dec_digits = digits.decode() if isinstance(digits, bytes) else digits
+            line_buffer += dec_digits
+            chunks = line_buffer.split(_REALTIME_DELIM)
+            for chunk in chunks:
+                try:
+                    jqpy(args, chunk, filters)
+                except json.decoder.JSONDecodeError:
+                    pass
+                line_buffer = _REALTIME_DELIM.join(chunks[1:])
+    else:
+        alert_file.seek(0)
+        for line in alert_file.readlines():
+            if args.echo:
+                print(line)
+                continue
+            else:
+                line = line.decode() if isinstance(line, bytes) else line
+                jqpy(args, line, filters)
 
 
 if __name__ == '__main__':
