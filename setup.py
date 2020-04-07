@@ -5,7 +5,7 @@ def readme():
         return f.read()
 
 setup(name='pyjq-ng',
-      version='v0.6.4',
+      version='v0.6.6',
       description="Tool used for converting jiffies from iptables xt_recent into timestamps.",
       long_description=readme(),
       long_description_content_type='text/markdown',
