@@ -83,7 +83,7 @@ class PyJQ(object):
             # print(self)
             # raise Exception('self.dline[{}] does not exists'.format(keys_repr))
             # not all the json entries have the same structure ...
-            pass
+            return
             
         if value:
             if ops[op](value_got, value):
@@ -157,9 +157,9 @@ if __name__ == '__main__':
                 else:
                     status = False
         if status:
-            print(jq)
-        
-        if args.limit:
-            limit_cnt += 1
-            if limit_cnt == args.limit:
-                break
+            print(jq)        
+            if args.limit:
+                limit_cnt += 1
+                if limit_cnt == args.limit:
+                    break
+    
