@@ -11,7 +11,7 @@ from functools import reduce  # forward compatibility for Python 3
 
 # datetime.datetime.strptime("2020-04-06T00:42:23.121+0200", strptime_format)
 _DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z" 
-
+_DATETIME_FORMAT_INPUT = _DATETIME_FORMAT[:-5]
 
 def _get_fblocks(fstr):
     """
@@ -115,18 +115,18 @@ def jqpy(args, line, filters=None):
                     datetime_format=args.datetime_format)
     status = True
     limit_cnt = 0
-    if args.start_datetime:
 
+    if args.start_datetime:
         # this is not needed with py37
-        start_datetime = datetime.datetime.strptime(args.start_datetime, args.datetime_format)
-        end_datetime = datetime.datetime.strptime(args.end_datetime, args.datetime_format)
-        
-        if jq.datetime < start_datetime.replace(tzinfo=pytz.UTC) or \
-           jq.datetime > end_datetime.replace(tzinfo=pytz.UTC):
+        start_datetime = datetime.datetime.strptime(args.start_datetime, _DATETIME_FORMAT_INPUT)
+        if jq.datetime < start_datetime.replace(tzinfo=pytz.UTC):
+            return
+    if args.end_datetime:
+        # this is not needed with py37
+        end_datetime = datetime.datetime.strptime(args.end_datetime, _DATETIME_FORMAT_INPUT)
+        if jq.datetime > end_datetime.replace(tzinfo=pytz.UTC):
             return
 
-        
-        
     if filters:
         filters_blocks = _get_fblocks(filters)
         for fi in filters_blocks:
