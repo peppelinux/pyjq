@@ -177,7 +177,10 @@ def handle_stream(args):
             jqpy(args, dline, filters)
     except json.decoder.JSONDecodeError as excp:
         #raise('This is not a pure json file "{}" but multiple json delimited by /n'.format(excp))
-        alert_file.seek(0)
+        # if realtime it takes only the latest entries
+        if not args.realtime:
+            alert_file.seek(0)
+
         line_buffer = ''
         for line in alert_file.readlines():
             if args.echo:
@@ -187,6 +190,8 @@ def handle_stream(args):
                 next_loop = True
                 while next_loop:
                     line_buffer += line.decode() if isinstance(line, bytes) else line
+                    # remove prepending missing json chunks
+                    line_buffer = line_buffer.split('\n')[-1]
                     try:
                         jqpy(args, line_buffer, filters)
                         next_loop = False
@@ -222,7 +227,7 @@ if __name__ == '__main__':
                         help="how many results to return")
     parser.add_argument('-realtime', action='store_true',
                         required=False,
-                        help="continous and realtime reading")
+                        help="continous and realtime reading, takes only the latest entries")
     parser.add_argument('-echo', action='store_true',
                         required=False,
                         help="print processed lines in raw format and exit")
