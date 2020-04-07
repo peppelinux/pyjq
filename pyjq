@@ -5,6 +5,7 @@ import operator
 import re
 import pytz
 import time
+import sys
 
 from functools import reduce  # forward compatibility for Python 3
 
@@ -142,8 +143,10 @@ def jqpy(args, line, filters=None):
                 status = and_status
             else:
                 status = False
+    
+    
     if status:
-        print(jq)        
+        print(jq)
         if args.limit:
             limit_cnt += 1
             if limit_cnt == args.limit:
@@ -151,6 +154,7 @@ def jqpy(args, line, filters=None):
 
 
 def handle_stream(args):
+    file_content = ''
     try:
         alert_file = open(args.json)
         file_content = alert_file.read()
@@ -167,12 +171,18 @@ def handle_stream(args):
     try:
         dlines = json.loads(file_content)
         for dline in dlines:
+            if args.echo:
+                print(dline)
+                continue
             jqpy(args, dline, filters)
     except json.decoder.JSONDecodeError as excp:
         #raise('This is not a pure json file "{}" but multiple json delimited by /n'.format(excp))
         alert_file.seek(0)
         line_buffer = ''
         for line in alert_file.readlines():
+            if args.echo:
+                print(line)
+                continue
             if args.realtime:
                 next_loop = True
                 while next_loop:
@@ -213,6 +223,9 @@ if __name__ == '__main__':
     parser.add_argument('-realtime', action='store_true',
                         required=False,
                         help="continous and realtime reading")
+    parser.add_argument('-echo', action='store_true',
+                        required=False,
+                        help="print processed lines in raw format and exit")
     args = parser.parse_args()
 
     
