@@ -6,7 +6,7 @@ def readme():
 
 setup(name='pyjq-ng',
       version='v0.6.6',
-      description="Tool used for converting jiffies from iptables xt_recent into timestamps.",
+      description="A simple Python package to Query Json Data.",
       long_description=readme(),
       long_description_content_type='text/markdown',
       classifiers=['Development Status :: 5 - Production/Stable',
