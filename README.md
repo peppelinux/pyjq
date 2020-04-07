@@ -18,7 +18,7 @@ See `pyjq.PyJQ.filter` to extend ops mapping.
 ## Installation
 
 ````
-pip install pyjq
+pip install pyjq-ng
 ````
 ## Example data
 
