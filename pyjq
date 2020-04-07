@@ -174,12 +174,15 @@ def handle_stream(args):
         line_buffer = ''
         for line in alert_file.readlines():
             if args.realtime:
-                while 1:
+                next_loop = True
+                while next_loop:
                     line_buffer += line.decode() if isinstance(line, bytes) else line
                     try:
                         jqpy(args, line_buffer, filters)
+                        next_loop = False
+                        line_buffer = ''
                     except json.decoder.JSONDecodeError:
-                        break
+                        next_loop = True
             else:
                 line = line.decode() if isinstance(line, bytes) else line
                 jqpy(args, line, filters)
