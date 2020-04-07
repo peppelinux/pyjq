@@ -54,7 +54,7 @@ pyjq -j ../Scaricati/alerts.json -start_datetime 2020-04-06T10:22:00 -end_dateti
 
 Realtime reading, it will only takes the latter entries, delimited by newline \n
 ````
-pyjq -j /var/ossec/logs/alerts/alerts.json -r -start_date 2020-04-07T14:40:23 -datetime_field timestamp -realtime
+pyjq -j /var/ossec/logs/alerts/alerts.json -datetime_field timestamp -realtime
 ````
 
 Use a gzipped json file directly

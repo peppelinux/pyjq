@@ -191,13 +191,15 @@ def handle_stream(args):
                 while next_loop:
                     line_buffer += line.decode() if isinstance(line, bytes) else line
                     # remove prepending missing json chunks
-                    line_buffer = line_buffer.split('\n')[-1]
-                    try:
-                        jqpy(args, line_buffer, filters)
-                        next_loop = False
-                        line_buffer = ''
-                    except json.decoder.JSONDecodeError:
-                        next_loop = True
+                    chunks = line_buffer.split('\n')
+                    for chunked_line in chunks:
+                        try:
+                            jqpy(args, chunked_line, filters)
+                            next_loop = False
+                            line_buffer = chunks[-1]
+                        except json.decoder.JSONDecodeError:
+                            next_loop = True
+                    
             else:
                 line = line.decode() if isinstance(line, bytes) else line
                 jqpy(args, line, filters)
