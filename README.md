@@ -52,7 +52,7 @@ Convert a specified filed to a pure datetime object and filter in a specified ra
 pyjq -j ../Scaricati/alerts.json -start_datetime 2020-04-06T10:22:00 -end_datetime 2020-04-06T13:22:00 -datetime_field timestamp
 ````
 
-Realtime reading
+Realtime reading, it will only takes the latter entries, delimited by newline \n
 ````
 pyjq -j /var/ossec/logs/alerts/alerts.json -r -start_date 2020-04-07T14:40:23 -datetime_field timestamp -realtime
 ````
