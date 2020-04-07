@@ -67,6 +67,11 @@ Limit results to 2
 pyjq -j ../Scaricati/alerts.json  -limit 2
 ````
 
+Realtime monitoring of a specific entity
+````
+pyjq -j /var/ossec/logs/alerts/alerts.json -realtime -filter 'agent__name == tinyurl and rule__level == 3'
+````
+
 ## Author
 
 Giuseppe De Marco <giuseppe.demarco@unical.it>

@@ -53,8 +53,6 @@ class PyJQ(object):
         """
         keys = key.split('__')
         dt_value = ''
-        if key == 'admin.logentry':
-            import pdb; pdb.set_trace()
         for dline in self.dline:
             try:
                 dt_value = reduce(operator.getitem, keys, dline)
@@ -92,9 +90,9 @@ class PyJQ(object):
         if op not in ops:
             raise Exception('Invalid operator "{}"'.format(op))
             
-        value_got = self._get_value(key)
-            
-        if ops[op](value_got, value):
+        value_got = str(self._get_value(key)).encode()
+        
+        if ops[op](value_got, str(value).encode()):
             return True
         elif value == None:
             return value_got
