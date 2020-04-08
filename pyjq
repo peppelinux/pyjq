@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 import datetime
-from importlib import import_module
+import io
 import gzip
 import json
 import operator
 import re
 import pytz
-import time
+import os
+import select
 import sys
+import time
 
 from functools import reduce  # forward compatibility for Python 3
-
+from importlib import import_module
 
 # datetime.datetime.strptime("2020-04-06T00:42:23.121+0200", strptime_format)
 _DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z" 
@@ -164,14 +166,20 @@ def jqpy(args, line, callback_func=print, filters=None):
 
 def handle_stream(args):
     file_content = ''
-    try:
-        alert_file = open(args.json)
-        file_content = alert_file.read()
-    except UnicodeDecodeError:
-        # try to handle it a gzip
-        alert_file = gzip.open(args.json, 'rb')
-        file_content = alert_file.read().decode()
-
+    if args.json:
+        file_stream = args.json
+        try:
+            alert_file = open(file_stream)
+            file_content = alert_file.read()
+        except UnicodeDecodeError:
+            # try to handle it a gzip
+            alert_file = gzip.open(file_stream, 'rb')
+            file_content = alert_file.read().decode()
+    else:
+        # STDIN handler
+        file_stream = alert_file = sys.stdin
+        file_content = sys.stdin.read(_BUFSIZE)
+            
     # got something like ['agent__ip', '==', '172.16.16.254']
     filters = args.filters
 
@@ -196,11 +204,13 @@ def handle_stream(args):
         pass
     
     # if realtime it takes only the latest entries
-    if args.realtime:
+    if args.realtime or isinstance(file_stream, io.TextIOBase):
         line_buffer = ''
-        alert_file.read()
+        if args.json:
+            # stdin blocks the reading ...
+            alert_file.read()
         while 1:
-            time.sleep(1)
+            time.sleep(args.timeout)
             digits = alert_file.read(_BUFSIZE)
             dec_digits = digits.decode() if isinstance(digits, bytes) else digits
             line_buffer += dec_digits
@@ -212,8 +222,13 @@ def handle_stream(args):
                     pass
                 line_buffer = _REALTIME_DELIM.join(chunks[1:])
     else:
-        alert_file.seek(0)
-        for line in alert_file.readlines():
+        if args.json: 
+            alert_file.seek(0)
+            lines = iter(alert_file.readlines())
+        else:
+            # stdin
+            lines = file_content.splitlines()
+        for line in lines:
             if args.echo:
                 print(line)
                 continue
@@ -225,7 +240,7 @@ def handle_stream(args):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('-json', required=True,
+    parser.add_argument('-json', required=False,
                         help="a json file")
     parser.add_argument('-filters', required=False,
                         help="")
@@ -253,5 +268,9 @@ if __name__ == '__main__':
     parser.add_argument('-callback',
                         required=False,
                         help="a custom python function to be called on each occourrency")
+    parser.add_argument('-timeout', type=float,
+                        default=0.112,
+                        required=False,
+                        help="how many seconds or milliseconds the reader wait before reading in realtime or stdin loop")
     args = parser.parse_args()
     handle_stream(args)

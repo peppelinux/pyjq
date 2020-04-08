@@ -77,6 +77,14 @@ Custom callback, usefull for bot integration and other pub/sub APIs
 python3 pyjq -j examples/alerts.json -realtime -filter 'agent__name == tinyurl and rule__description in ssh' -callback 'examples.callback.things'
 ````
 
+Reading from stdin
+````
+cat examples/alerts.json | python3 ./pyjq -filter 'rule__level > 3'
+
+# continous processing
+tail -f  /tmp/alerts.json | python3 ./pyjq -filter 'location != osquery'
+````
+
 ## Author
 
 Giuseppe De Marco <giuseppe.demarco@unical.it>
