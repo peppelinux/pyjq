@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import datetime
+from importlib import import_module
 import gzip
 import json
 import operator
@@ -112,7 +113,12 @@ class PyJQ(object):
         return json.dumps(self.dline, indent=2)
 
 
-def jqpy(args, line, filters=None):
+def jqpy(args, line, callback_func=print, filters=None):
+    """
+    args could be acustom object with all the fields defined in argparse (see __main__)
+    callback_func is the function that will be called on each occourrencies
+    filters is optional
+    """
     jq = PyJQ(line, datetime_field=args.datetime_field,
                     datetime_format=args.datetime_format)
     status = True
@@ -120,12 +126,14 @@ def jqpy(args, line, filters=None):
 
     if args.start_datetime:
         # this is not needed with py37
-        start_datetime = datetime.datetime.strptime(args.start_datetime, _DATETIME_FORMAT_INPUT)
+        start_datetime = datetime.datetime.strptime(args.start_datetime,
+                                                    _DATETIME_FORMAT_INPUT)
         if jq.datetime < start_datetime.replace(tzinfo=pytz.UTC):
             return
     if args.end_datetime:
         # this is not needed with py37
-        end_datetime = datetime.datetime.strptime(args.end_datetime, _DATETIME_FORMAT_INPUT)
+        end_datetime = datetime.datetime.strptime(args.end_datetime,
+                                                  _DATETIME_FORMAT_INPUT)
         if jq.datetime > end_datetime.replace(tzinfo=pytz.UTC):
             return
 
@@ -146,7 +154,8 @@ def jqpy(args, line, filters=None):
                 status = False
     
     if status:
-        print(jq)
+        # default is print but everithing will just works ...
+        callback_func(jq)
         if args.limit:
             limit_cnt += 1
             if limit_cnt == args.limit:
@@ -166,6 +175,13 @@ def handle_stream(args):
     # got something like ['agent__ip', '==', '172.16.16.254']
     filters = args.filters
 
+    if args.callback:
+        package, function = args.callback.rsplit('.', 1)
+        package = import_module(package)
+        callback = getattr(package, function)
+    else:
+        callback = print
+    
     # handle a pure json file or multiple json objects delimited by newline (/n)
     try:
         dlines = json.loads(file_content)
@@ -173,7 +189,7 @@ def handle_stream(args):
             if args.echo:
                 print(dline)
                 continue
-            jqpy(args, dline, filters)
+            jqpy(args, dline, callback_func=callback, filters=filters)
         return
     except json.decoder.JSONDecodeError as excp:
         #raise('This is not a pure json file "{}" but multiple json delimited by /n'.format(excp))
@@ -191,7 +207,7 @@ def handle_stream(args):
             chunks = line_buffer.split(_REALTIME_DELIM)
             for chunk in chunks:
                 try:
-                    jqpy(args, chunk, filters)
+                    jqpy(args, chunk, callback_func=callback, filters=filters)
                 except json.decoder.JSONDecodeError:
                     pass
                 line_buffer = _REALTIME_DELIM.join(chunks[1:])
@@ -203,7 +219,7 @@ def handle_stream(args):
                 continue
             else:
                 line = line.decode() if isinstance(line, bytes) else line
-                jqpy(args, line, filters)
+                jqpy(args, line, callback_func=callback, filters=filters)
 
 
 if __name__ == '__main__':
@@ -234,5 +250,8 @@ if __name__ == '__main__':
     parser.add_argument('-echo', action='store_true',
                         required=False,
                         help="print processed lines in raw format and exit")
+    parser.add_argument('-callback',
+                        required=False,
+                        help="a custom python function to be called on each occourrency")
     args = parser.parse_args()
     handle_stream(args)

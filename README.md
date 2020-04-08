@@ -72,6 +72,11 @@ Realtime monitoring of a specific entity
 pyjq -j /var/ossec/logs/alerts/alerts.json -realtime -filter 'agent__name == tinyurl and rule__level == 3'
 ````
 
+Custom callback, usefull for bot integration and other pub/sub APIs
+````
+python3 pyjq -j examples/alerts.json -realtime -filter 'agent__name == tinyurl and rule__description in ssh' -callback 'examples.callback.things'
+````
+
 ## Author
 
 Giuseppe De Marco <giuseppe.demarco@unical.it>
