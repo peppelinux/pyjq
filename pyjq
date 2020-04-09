@@ -97,9 +97,8 @@ class PyJQ(object):
                }
         if op not in ops:
             raise Exception('Invalid operator "{}"'.format(op))
-            
         value_got = str(self._get_value(key)).encode()
-        
+
         if ops[op](value_got, str(value).encode()):
             return True
         elif value == None:
@@ -123,7 +122,6 @@ def jqpy(args, line, callback_func=print, filters=None):
     """
     jq = PyJQ(line, datetime_field=args.datetime_field,
                     datetime_format=args.datetime_format)
-    status = True
     limit_cnt = 0
 
     if args.start_datetime:
@@ -139,22 +137,25 @@ def jqpy(args, line, callback_func=print, filters=None):
         if jq.datetime > end_datetime.replace(tzinfo=pytz.UTC):
             return
 
+    status = True
+    and_status = False
     if filters:
         filters_blocks = _get_fblocks(filters)
         for fi in filters_blocks:
-            if len(fi) == 1 and jq.filter(*fi[0].split(' ')):
-                status = True              
-                break
-            elif len(fi) > 1:
-                and_status = True
+            # and
+            if len(fi) > 1:
                 for and_filter in fi:
-                    if not jq.filter(*and_filter.split(' ')):
-                        and_status = False
+                    and_status = jq.filter(*and_filter.split(' '))
+                    if not and_status:
                         break
                 status = and_status
-            else:
-                status = False
-    
+            if and_status:
+                break
+            
+            # or
+            if len(fi) == 1:
+                status = jq.filter(*fi[0].split(' '))       
+
     if status:
         # default is print but everithing will just works ...
         callback_func(jq)
@@ -200,14 +201,15 @@ def handle_stream(args):
             jqpy(args, dline, callback_func=callback, filters=filters)
         return
     except json.decoder.JSONDecodeError as excp:
-        #raise('This is not a pure json file "{}" but multiple json delimited by /n'.format(excp))
+        # raise('This is not a pure json file "{}" but multiple json delimited by /n'.format(excp))
         pass
     
-    # if realtime it takes only the latest entries
+    # realtime or stdin driven streams takes only the latest entries
     if args.realtime or isinstance(file_stream, io.TextIOBase):
         line_buffer = ''
         if args.json:
             # stdin blocks the reading ...
+            # if realtime ignores the older datas
             alert_file.read()
         while 1:
             time.sleep(args.timeout)
@@ -222,7 +224,8 @@ def handle_stream(args):
                     pass
                 line_buffer = _REALTIME_DELIM.join(chunks[1:])
     else:
-        if args.json: 
+        if args.json:
+            # start from the begin
             alert_file.seek(0)
             lines = iter(alert_file.readlines())
         else:
@@ -268,6 +271,9 @@ if __name__ == '__main__':
     parser.add_argument('-callback',
                         required=False,
                         help="a custom python function to be called on each occourrency")
+    parser.add_argument('-pretty', action='store_true',
+                        required=False, default=True,
+                        help="print indented json")
     parser.add_argument('-timeout', type=float,
                         default=0.112,
                         required=False,
