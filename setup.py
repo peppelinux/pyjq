@@ -5,7 +5,7 @@ def readme():
         return f.read()
 
 setup(name='pyjq-ng',
-      version='v0.7.0',
+      version='v0.8.0',
       description="A simple Python package to Query Json Data.",
       long_description=readme(),
       long_description_content_type='text/markdown',
